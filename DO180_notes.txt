@@ -1,0 +1,332 @@
+
+ 	Welcome to DO180   Red Hat OpenShift I: Containers & Kubernetes  	
+		EX180	OCP 4.14
+	
+
+
+Audio / Video / Screen Share
+
+
+
+
+
+Name:
+Org: 		If Possible MI6 CIA NATO
+Experience:
+	
+	1. Containers, Kubernetes and Red Hat OpenShift Technical Overview (DO080) at https://www.redhat.com/en/services/training/do080-deploying-containerized-applications-technical-overview or equivalent knowledge of Linux containers.
+	2. Significant Linux experience is not needed for this course. Basic skills operating a Bash shell are sufficient.		
+	3. vi/vim(text editor) cp mv  rm mkdir cd ssh firewall-cmd Docker/Podman
+		
+		
+Expectation: 	
+City/Timezone: 
+Hobbies:
+
+
+
+
+
+
+
+
+
+
+
+oc patch pod valid-pod --type='json' \
+-p='[{"op": "replace", "path": "/spec/containers/0/image", \
+"value":"http://registry.access.redhat.com/ubi8/httpd-24"}]'
+
+
+
+
+
+oc create secret docker-registry registrycreds \
+--docker-server registry.example.com \
+--docker-username youruser \
+--docker-password yourpassword
+Another way of creating the secret is to use the authentication token from the podman login command:
+
+ oc create secret generic registrycreds \
+--from-file .dockerconfigjson=${XDG_RUNTIME_DIR}/containers/auth.json \
+--type kubernetes.io/dockerconfigjson
+You then link the secret to the default service account from your project:
+
+oc secrets link default registrycreds --for pull 
+
+
+
+## Chapter 1: Introduction to Kubernetes and OpenShift ##
+
+Control Plane: Master Nodes (Redhat CoreOS) Orchestrate Cluster System Application which are created during installation
+Compute Plane: Worker Nodes (Redhat CoreOS) User Application
+
+
+Namespace (kubernetes) and Project(Openshift) are Mostly same 
+project = namespace + security annotations
+
+Route Connection from Outside WORLD  
+Pod Abstract over 1 or several containers 
+container ENvironment containing Application, Require dependency (Image) CPU,Memory , Container behaves as Virtual Hardware
+Service Provide Stable IP, Load Balancer IP for PODS
+replicaset Find number of Current Running Pods and equalize them to Desired Pods
+Imagestream is a link/metadata to External Registry Image 
+deployment
+Deployment = Replicaset + Pod Format(with containers)
+
+## Watch Pods/Replicasets/Images ##
+oc get pods -o wide
+oc get pods -o wide --watch
+oc image info registry.access.redhat.com/ubi8/httpd-24:latest
+oc get pods  --show-labels 
+oc get replicaset  --show-labels 
+
+
+## Verify coreos has 2 users and 2 services kubelet and crio
+
+ssh -i .ssh/private_key core@node_ip
+
+[core@master1 ~]$ sudo -i
+[root@master1 ~]# cat /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+core:x:1000:1000:CoreOS Admin:/var/home/core:/bin/bash
+containers:x:993:995:User for housing the sub ID range for containers:/var/home/containers:/sbin/nologin
+
+systemctl status kubelet.service
+systemctl status crio.service [Container Runtime Interface-Open Container Initiative]
+
+
+[core@worker1 ~]$ sudo -i
+[root@worker1 ~]# crictl ps
+
+
+
+oc exec -c rene-db custom-app-655bb997dd-fdzkj -- env | grep MYSQL
+
+
+## Selector for Replicaset in Deployment ##
+deployment:
+ selector:
+    matchLabels:
+      app: water
+      
+## Labels for Pod / Become filter for Replicaset/Service ##
+      
+Pod:
+  labels:
+    app: water
+
+
+## Download openshift-install and oc command client ##
+
+https://console.redhat.com/openshift
+
+wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.12.21/openshift-install-linux.tar.gz
+wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.12.21/openshift-client-linux-4.12.21.tar.gz
+
+
+
+
+## Create Pod via command/yaml file ##
+ oc run malcolm --image=registry.access.redhat.com/ubi8/httpd-24 --port=8080 --port=8443 --dry-run=client -o yaml >malcolm.yml
+ vim malcolm.yml 
+ 
+ ## Create Deployment via command/yaml file ##
+ 
+ oc create deployment julian --image=registry.access.redhat.com/ubi8/httpd-2 --port=8080 --help | less
+ oc create deployment julian --image=registry.access.redhat.com/ubi8/httpd-24 --port=8080 --replicas=2 --dry-run=client -o yaml > julian-deployment.yml
+ vim julian-deployment.yml
+ oc create -f julian-deployment.yml 
+ oc get deployment
+ oc get pods
+ oc get replicasets.apps 
+ 
+## Create Service  via command/yaml file ##
+ 
+ oc get service
+ oc expose deployment julian --dry-run=client -o yaml > julian-service.yml
+ cat julian-service.yml 
+ oc create -f julian-service.yml 
+ oc get service
+ oc describe svc julian 
+ oc get pods -o wide
+ oc describe endpoints julian
+ 
+ ## Create Route  via command/yaml file ##
+ 
+ oc expose service julian --dry-run=client -o yaml > julian-route.yml
+ oc get route
+ vim julian-route.yml 
+ oc create -f julian-route.yml 
+ oc get route
+ curl julian-project2.apps.lab.ocp.com | less
+
+
+
+## Custom Columns for a POD ##
+oc get pod/water-698b9fc858-5r6kk -o custom-columns=KIND:{.kind},POD_NAME:{.metadata.name},POD_IP:{.status.podIP},Host_IP:{.status.hostIP},Node_Name:{.spec.nodeName}
+
+## Custom Columns for a Node ##
+oc get -o json node/worker3.lab.ocp.com  | jq  '.status.allocatable.cpu'
+ oc adm node-logs worker3.lab.ocp.com -u crio --tail 2
+  oc get pods -w --show-labels
+oc get replicasets.apps --show-labels 
+
+
+## Deploy Application via oc new-app command Deployment(Kubenetes Recommended)/DeploymentConfig(OCP Only if reuired a specific parameter) ##
+
+oc new-app --as-deployment-config --env MYSQL_USER=stephane -e MYSQL_DATABASE=mi6 -e MYSQL_PASSWORD=pass@123 -e MYSQL_ROOT_PASSWORD=r00tpa55 --image registry.access.redhat.com/rhscl/mysql-80-rhel7  --name dc-demo
+
+oc new-app  --env MYSQL_USER=stephane -e MYSQL_DATABASE=mi6 -e MYSQL_PASSWORD=pass@123 -e MYSQL_ROOT_PASSWORD=r00tpa55 --image registry.access.redhat.com/rhscl/mysql-80-rhel7  --name dc-demo
+
+
+## Run a command in specific Container in Pod ##
+ oc exec --container=web tomas -- cat /etc/httpd/conf/httpd.conf
+
+oc run -it youme   --image registry.access.redhat.com/ubi8/ubi --port=8080 --command -- /bin/bash
+
+## Delete Pod of a specific application by filtering pods on LABELS ##
+kubectl delete pod -l app=myapp
+
+
+	## Inspect Images ##
+
+## Inspect Image directly on registry ##
+skopeo inspect docker://registry.access.redhat.com/ubi8/python-36
+
+## Inspect Image on Local system if pulled ##
+podman pull registry.access.redhat.com/ubi8/python-36
+podman inspect registry.access.redhat.com/ubi8/python-36  
+		OR
+podman image inspect registry.access.redhat.com/ubi8/python-36
+
+## Inspect Image via oc command ##
+
+oc image info registry.access.redhat.com/ubi8/python-36:latest
+
+
+## Run command in pod container ##
+
+oc exec -it tomas --container=database -- mysql -u juste -pmypa55 bank
+
+
+
+	#### Chapter 4:  Deploy Managed and Networked Applications on Kubernetes ####
+	
+oc new-app --template=mysql-ephemeral --param MYSQL_USER=malcolm  -p MYSQL_PASSWORD=mypa55 -p MYSQL_ROOT_PASSWORD=r00tpa55 -p MYSQL_DATABASE=bank -n openshift
+
+oc get template mysql-ephemeral -n openshift -o yaml > empty-template.yml
+oc process mysql-ephemeral --param MYSQL_USER=malcolm  -p MYSQL_PASSWORD=mypa55 -p MYSQL_ROOT_PASSWORD=r00tpa55 -p MYSQL_DATABASE=bank -n openshift -o yaml > filled.yml
+
+oc create -f filled.yml
+
+
+oc process mysql-ephemeral --param MYSQL_USER=malcolm  -p MYSQL_PASSWORD=mypa55 -p MYSQL_ROOT_PASSWORD=r00tpa55 -p MYSQL_DATABASE=bank -n openshift -o yaml | oc create -f -
+
+	## Create One time Job ##
+oc get jobs
+oc create job onetime --dry-run=client -o yaml --image registry.access.redhat.com/ubi8/ubi -- /bin/bash -c date > onetime.yml
+oc create -f onetime.yml
+
+	## Create Recurrent Cron Job ##
+oc get cronjobs.batch
+oc create cronjob manytime --dry-run=client -o yaml --image registry.access.redhat.com/ubi8/ubi --schedule="*/1 5-17 * * 1-5" -- /bin/bash -c date +%D-%R > regulartime.yml
+oc create -f regulartime.yml
+
+
+	## View CNI (Container Networking Interface) and POD/Service Network ##
+	oc describe/edit network.config/cluster
+	
+Kubernetes -> NodePort (External Access)
+OCP	-> Route (OCP)
+Kubernetes -> Ingress (Subset of Route)
+
+## All Resources API ##
+oc api-resources
+oc api-resources --namespaced=true --api-group apps --sort-by name
+
+
+	## Chapter 5:  Manage Storage for Application Configuration and Data ##
+
+## Create ConfigMap ##
+oc create configmap cm-redhat --from-literal=user=juste --from-literal=database=bank --dry-run=client -o yaml
+
+## Create Secret ##
+oc create secret generic secret-redhat --from-literal=password=mypa55 --from-literal=root_password=r00tpa55 --dry-run=client -o yaml
+
+## Set Configmap Environment Variable on Deployment via command with Prefix ##
+oc set env deployment/dbtest --from cm/cm-redhat --prefix MYSQL_
+
+## Set Secret Environment Variable on Deployment via command with Prefix ##
+oc set env deployment/dbtest --from secret/secret-redhat --prefix MYSQL_
+ 
+ ## Extract secret from existing configmap ##
+ oc extract secret/secret-redhat -n project2 --to .
+
+
+
+## Create Dynamic PV and PVC mounting via Command ##
+
+oc set volumes deployment/dc-demo --add --claim-class nfs-storage --type pvc --name example-pv-storage --claim-mode rwo --claim-size 4Gi --mount-path /var/lib/mysql/data/ --claim-name my-claim
+
+	#####   Chapter 6 ####
+	
+	
+## Set Readiness Probe via Command
+ oc set  probe deployment/custom --readiness --get-url http://:80/meme.html --failure-threshold 4 --period-seconds=5
+
+## Set Resources on Deployment via Command
+oc set resources deployment/water --requests=cpu=10m,memory=20Mi --limits=cpu=15m,memory=30Mi
+
+##  Set Resources on Deployment via Patch File
+oc patch deployment/water --patch-file patch-water-resource.yml
+
+
+
+## Manual Scaling of Pods  ##
+
+oc scale --replicas=2 deployment/water
+
+## Self Adjusting number of Pods ##
+Horizontal Pod Autoscaler
+CPU/Memory
+
+## Create CPU  HorizontalPodAutoscaler via command ## 
+oc autoscale -o yaml deployment/water --min=1 --max=10 --cpu-percent=80 > hpa-cpu.yml
+
+## Create Memory  HorizontalPodAutoscaler via File Only ##
+
+
+	## Chapter 7: ##
+	
+	
+## S2I Source to Image: Build Image manually for Kubernetes  ##
+
+wget https://github.com/openshift/source-to-image/releases/download/v1.3.9/source-to-image-v1.3.9-574a2640-linux-amd64.tar.gz
+
+tar xvf source-to-image-v1.3.9-574a2640-linux-amd64.tar.gz
+
+./s2i build --as-dockerfile Containerfile   --context-dir=php-helloworld https://github.com/navdeepsachdeva/DO180-apps/    registry.access.redhat.com/ubi8/php-73:latest arunas_web:1.0 
+
+podman build -t auruas_web:1.0 ./
+podman tag localhost/auruas_web:1.0 quay.io/USER_NAME/arunas_web:1.0
+podman push quay.io/USER_NAME/arunas_web:1.0
+
+
+## S2I Source to Image in Openshift ##
+
+oc new-app --as-deployment-config --image-stream php:7.3 --code https://github.com/navdeepsachdeva/DO180-apps/ --context-dir=php-helloworld --name front
+
+## Rollout to Previous Version ##
+oc rollout undo dc/front
+
+
+## Pause/resoume new Deployment ##
+oc rollout pause/resume deployment/front
+
+
+## Enable/Disable Triggers for Deployment ##
+
+
+oc set triggers deployment/front --manual
+oc set triggers deployment/front --auto

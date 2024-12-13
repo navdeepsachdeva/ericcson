@@ -1,0 +1,731 @@
+
+Welcome to DO280: Red Hat OpenShift Administration II: Operating a Production Kubernetes Cluster
+	OCP 4.12
+
+
+
+
+
+
+vim ssh mv rm mkdir ls cd TAB TAB	
+
+Brad, TK, Sergey Mainly Windows
+Sri,Ramesh, TW, Wille, Linux
+
+https://github.com/jonmosco/kube-ps1
+
+vim ~/.bashrc
+
+# kube
+source ~/.kube-ps1.sh
+function get_cluster_short() {159.135.175.70
+  echo "$1" | cut -d "/" -f2 |cut -d"-" -f2
+}
+export KUBE_PS1_CLUSTER_FUNCTION=get_cluster_short
+export KUBE_PS1_SYMBOL_USE_IMG=true
+export KUBE_PS1_SYMBOL_PADDING=false
+export KUBE_PS1_SYMBOL_ENABLE=true
+#export PS1='[\u@\h \W$(kube_ps1)]\$ '
+kubeoff
+
+
+
+
+		## Chapter 1: Declarative Resource Management ##
+
+Registry:
+Kubernetes:	Uses external Registry docker.io,quay.io, registry.redhat.io, Org. Internal Registry
+Openshift:	Uses external Registry docker.io,quay.io, registry.redhat.io, Org. Internal Registry
+		OCP has its own INTERNAL Registry
+
+
+	Kubernetes				Openshift
+1.	No Internal Registry			Internal Registry
+2.	Security(root user)			Restricted Users Random ID(No root user containers by default)
+3.	NodePort, Ingress			Route (provide FQDN),Ingress
+4.	Deployment				DeploymentConfig, Deployment
+5.	ReplicaSet				ReplicationController,ReplicaSet
+6.	No Inbuild s2i				s2i(source to Image) Inbuild
+7.						BuildConfig for s2i
+8.	one master node				3 Master nodes required for OCP and 2 workers
+
+
+ 
+kubectl create deployment hello-openshift -o yaml --image registry.ocp4.example.com:8443/redhattraining/hello-world-nginx:v1.0 --save-config --dry-run=client > ~/my-app/example-deployment.yaml
+
+
+## Create Multiple resources from Directory  ##
+kubectl create -R -f ~/my-app
+
+kubectl apply -f ~/my-app/example-deployment.yaml --dry-run=server --validate=true
+
+## Comparing Changes in file with Server Resources ##
+kubectl diff -f example-deployment.yaml
+
+
+		## Kustomize Overlays ##
+
+kubectl apply -k base/
+oc get all -w
+oc get pods -w
+oc get deployment
+oc get pods -w
+oc edit deployment custom 
+oc apply -k overlays/dev/
+oc get pods -w
+oc delete all --all
+oc get all
+oc apply -k base/
+oc get pods -w
+oc get pods -w
+oc apply -k overlays/dev/
+oc get pods -w
+oc apply -k overlays/dev/
+oc get pods -w
+vim overlays/dev/replica_limits.yaml 
+oc describe pod custom-64d5bc76f7-zbdb8
+oc apply -k overlays/test/
+oc get pods -w
+oc apply -k overlays/prod/
+oc get pods -w
+oc apply -k base/
+oc get pods -w
+vim base/deployment.yaml 
+cat base/route.yaml 
+cat base/service.yaml 
+vim ../mydeployment.yml 
+oc get pods
+oc edit pod custom-5449d59968-hkv5z
+oc apply -f overlays/dev/
+oc apply -k overlays/dev/
+oc get pods -w
+oc edit custom-64d5bc76f7-z7xs7
+oc edit pod custom-64d5bc76f7-z7xs7
+oc apply -k overlays/test/
+
+
+
+
+		## Chapter 2: Deploy Packaged Applications  ##
+
+		## Openshift Templates ##
+Doctor
+Form Online/Empty Form 		Template
+Fill you values			Filled Form/template processed
+Doctor				put in his laptop and generate you P ID
+
+Create an App					Template
+Filled values/dev/stage/prod/			password,username,DB,replicas
+create all resources
+	
+#########  Openshift Templates ##########
+oc get template mysql-ephemeral -n openshift > mysql-ephemeral-template.json
+
+oc process -f mysql-ephemeral-template.yaml -p MYSQL_USER=user1 -p MYSQL_PASSWORD=mypa55 -p MYSQL_DATABASE=items  | oc create -f -
+
+
+OR
+
+1.	Export/Create Template:
+oc get template mysql-ephemeral -n openshift -o yaml > export_template.yaml
+
+2.	Process Template with your Values:
+oc process mysql-ephemeral -n openshift -o yaml -p MYSQL_USER=user1 -p MYSQL_PASSWORD=mypa55 -p MYSQL_DATABASE=items > filled.yaml
+
+3.	Execute the processed Template/Create all resources mentioned in Template:
+oc create -f filled.yaml
+
+	Delete all resources in project:
+oc delete all --all
+
+
+## Extract only Last Known Configuration
+ oc get deployment/dbapp -o yaml -o jsonpath="{ .metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration }" | jq
+
+
+## Fill Template with values
+
+ oc process  mysql-ephemeral -p MYSQL_USER=Guntis -p MYSQL_DATABASE=lmt -p MYSQL_PASSWORD=pass_lmt -p MYSQL_ROOT_PASSWORD=r00tpa55 -n openshift -o yaml > filled.yml
+oc create -f filled.yml
+
+
+		## Kubernetes Helm Charts ##
+
+
+## Helm Dependency
+https://helm.sh/docs/helm/helm_dependency/
+
+mkdir lmt-kustomize
+mkdir lmt-kustomize/{base,overlays}
+cp mydeployment.yml lmt-kustomize/base/deployment.yml
+tree lmt-kustomize/
+cd lmt-kustomize/
+tree
+vim base/kustomization.yaml
+vim base/deployment.yml 
+tree
+mkdir overlays/{dev,test,prod}
+tree
+vim overlays/dev/kustomization.yaml
+vim overlays/dev/replica_limits.yaml
+ls
+ls overlays/
+rm -rf overlays/test
+cp -r overlays/dev/ overlays/test
+vim overlays/test/replica_limits.yaml 
+tree
+oc describe custom-5449d59968-7bmzw | grep resources
+kubectl kustomize overlays/dev
+oc apply -f overlays/dev/
+vim overlays/dev/replica_limits.yaml 
+oc apply -k overlays/dev/
+oc delete pod custom-5449d59968-7bmzw
+oc apply -k overlays/test
+cat overlays/dev/replica_limits.yaml 
+cat overlays/test/replica_limits.yaml 
+vim overlays/dev/replica_limits.yaml 
+tree
+vp base/deployment.yaml base/service.yml
+cp base/deployment.yaml base/service.yml
+cp base/deployment.yaml base/route.yaml
+mv base/service.yml base/service.yaml 
+vim base/route.yaml 
+vim base/service.yaml 
+vim base/deployment.yaml 
+vim base/kustomization.yaml 
+vim overlays/dev/replica_limits.yaml 
+oc logs -f custom-f58845df-5htj5 -c web
+oc logs -f custom-f58845df-5htj5 -c database
+vim overlays/dev/replica_limits.yaml 
+vim overlays/test/replica_limits.yaml 
+oc create -f overlays/test/
+vim overlays/test/replica_limits.yaml 
+oc describe pod custom-64d5bc76f7-v7p72
+oc get pods
+oc describe pod custom-8d74d949f-hm6jp
+cp -r overlays/test/ overlays/prod
+tree
+rm -rf overlays/prod/
+cp -r overlays/test/ overlays/prod
+vim overlays/prod/replica_limits.yaml 
+oc edit pod custom-8d74d949f-h22kc
+oc edit pod custom-8d74d949f-v7qkl 
+oc get pods -w
+oc edit pod custom-5bbc4fc557-czg5b
+tree
+vim overlays/dev/replica_limits.yaml 
+vim overlays/test/replica_limits.yaml 
+vim overlays/prod/replica_limits.yaml 
+vim overlays/test/replica_limits.yaml 
+vim overlays/prod/replica_limits.yaml 
+cd ../
+
+
+
+
+
+		## Chapter 3: Authentication and Authorization  ##
+
+## Login via Kubeadmin (2 ways)
+		
+export KUBECONFIG=/home/user/auth/kubeconfig
+oc get nodes
+
+		OR
+
+oc --kubeconfig /home/student/kubeconfig get nodes
+
+
+## Be careful, make other user cluster-admin before deleting kubeadmin user, otherwise cluster needs to be reinstalled
+oc delete secret kubeadmin -n kube-system
+
+		# HTPasswd File and localusers authentication#
+		
+## Create File
+
+htpasswd -c -B -b /tmp/htpasswd student redhat123	// Create new file and update user
+htpasswd -b /tmp/htpasswd student redhat1234		//Add or update credentials.
+htpasswd -D /tmp/htpasswd student			//Delete user from File
+htpasswd -b -c /tmp/htpasswd admin redhat123  //defult md5
+htpasswd -b -B /tmp/htpasswd john redhat123  //bcrypt
+
+
+## Create secrets in openshift-config project and update with new accounts
+
+oc create secret generic htpasswd-secret --from-file htpasswd=/tmp/htpasswd -n openshift-config
+
+oc get oauth cluster -o yaml > oauth.yaml
+
+## Update oauth.yml
+
+identityProviders:
+- name: my_htpasswd_provider
+  mappingMethod: claim
+  type: HTPasswd
+  htpasswd:
+    fileData:
+      name: htpasswd-secret
+
+## Update new secrets
+oc replace -f oauth.yaml
+
+## Authenticaton operator will update
+
+watch oc get co
+oc get pods -w -n openshift-authentication
+
+# Extracting Secret Data #
+oc extract secret/htpasswd-secret -n openshift-config --to /tmp/ --confirm /tmp/htpasswd
+
+	## Add/delete users from /tmp/htpasswd
+oc set data secret/htpasswd-secret --from-file htpasswd=/tmp/htpasswd -n openshift-config
+
+
+## Delete Identities before user
+
+oc delete identity my_htpasswd_provider:manager
+oc delete user manager
+
+
+
+		## Define and Apply Permissions with RBAC  ##
+		
+		
+## Assign cluster admin role to user
+
+oc adm policy add-cluster-role-to-user cluster-admin student
+
+## Role-based Access Control (RBAC)
+
+oc get clusterroles
+oc adm policy (TAB TAB)
+
+oc get clusterrole admin -o yaml
+oc adm policy who-can create project
+
+oc describe clusterrole view/basic-user
+
+## Provide role ro user on project
+oc policy add-role-to-user view username -n project_name
+oc get rolebinding
+oc describe rolebinding system:deployers
+
+## Create Group
+oc adm groups new dev-group
+oc adm groups add-users dev-group developer
+
+oc policy add-role-to-group view qa-group -n project__name
+
+oc get rolebindings -o wide
+
+## Remove rights to create project
+
+oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated:oauth
+
+## Add rights to create project
+
+oc adm policy add-cluster-role-to-group --rolebinding-name self-provisioners self-provisioner system:authenticated:oauth
+
+
+
+
+
+		## Process from creating users to Rights allocation ##
+		
+1. create htpasswd file
+
+2. create secret in openshift-config
+
+3. Download and update oath.yml
+	oc get oauth cluster -o yaml > oauth.yml
+	make changes
+	
+4. replace the oath with new htpasswd file
+	oc replace -f oauth.yml
+
+5. create groups
+
+6. create resources e.q. project,cm
+
+7. Assign rights to resources
+
+
+
+
+
+		## Chapter 4: Network Security ##
+		
+		Insecure Route:
+oc expose service service_name 
+
+
+			Edge Route:
+
+
+oc create route edge app2-https --service todo-http --hostname app2-https.apps.ocp4.example.com
+
+
+
+openssl genrsa --out training.key
+
+openssl req -new -subj "/C=US/ST=North Carolina/L=Raleigh/O=Red Hat/CN=edge2-https.apps.ocp4.example.com" -key training.key -out training.csr
+
+openssl x509 -req -in training.csr -signkey training.key -out training.crt
+
+oc create route edge edge2-https --service app1 --hostname edge2-https.apps.ocp4.example.com --key training.key  --cert training.crt
+
+
+
+	## Protect Internal Traffic with TLS: Zero-trust Environments ##
+	
+	## Deploy Main Application  ##
+    oc new-app registry.ocp4.example.com:8443/redhattraining/hello-world-nginx --name server
+    
+        ## Create Secret and Annotate Main Application Service to use Secret ##
+    oc annotate service server service.beta.openshift.io/serving-cert-secret-name=server-secret
+
+        ## Patch Main Application to use Secret ##
+    oc patch deployment server --patch-file patch.yaml
+
+        ## Create Client Application which doesn't use Secret ##
+    oc create -f pod1.yaml 
+
+        ## Test that client application has Error 19 ##
+    oc exec pod1 -- openssl s_client -connect server.test1.svc:443
+    
+        ## Create Configmap to use in Client App ##
+    oc create configmap ca-bundle
+
+        ## Annotate config map to use Secret ##
+    oc annotate configmap ca-bundle service.beta.openshift.io/inject-cabundle=true
+ 
+        ## Mount secret in client application pod to use configmap ##
+    oc create -f pod2.yaml 
+
+        ## Test that client application doesn't have certificate error ##
+    oc exec pod2 -- openssl s_client -connect server.test1.svc:443
+
+
+
+skopeo inspect docker://registry.access.redhat.com/rhscl/postgresql-96-rhel7:1
+skopeo inspect docker://registry.access.redhat.com/rhscl/postgresq-96-rhel7:1
+oc get deployment
+oc edit deployment/psql
+oc patch deployment/psql -p '{"spec":{"template":{"spec":{"containers":[{"name":"postgresql","image":"registry.redhat.io/rhel8/postgresql-13:1"}]}}}}'
+oc patch deployment/psql --patch-file path_file.yml
+
+
+
+
+		## Chapter 5: Expose non-HTTP/SNI Applications ##
+
+Kubernetes		OpenShift
+Community		Paid( Certified Distribution of Kubernetes )
+namespace		project
+Deployment		DeploymentConfig
+Replicaset		RelicationController
+
+## To Expose Application
+NodePort (Kubernetes) -> Route (OpenShift) -> Ingress (Kubernetes)
+LoadBalancer
+ExternalName
+
+
+
+Kubernetes DNS service run on service address
+ oc describe dns.operator/default
+172.30.0.10
+Add routing Table to all nodes via service (cluster.local) internal domain for kubernetes
+(cluster.local) Nothing to do with
+
+Service Network Range:
+ oc get networks.config/cluster -o jsonpath='{$.status.serviceNetwork}'
+oc get pods -n openshift-ingress
+oc rsh -n openshift-ingress router-default-6ff9ddbb9d-8hrhk
+cat /etc/resolv.conf
+
+nslookup lab.ocp.com
+
+oc debug node/master01
+cat /etc/resolv.conf
+
+oc rsh POD_NAME
+cat /etc/resolv.conf
+
+
+POD
+dig
+hosts - > resolv.conf -> coreDNS POD (service) -> forwarders -> Node resolv.conf
+	External
+	
+
+
+Kubernetes		NodePort OLD Technology, Ingress operator
+OCP			Route
+
+Expose service
+Route(FRONTEND) > directly send traffic to pods[/etc/hosts -> resolv.conf -> internal domain ->service MYSQL] -> mysql -> POD MYSQL -> 
+
+
+Netfilter: lookup of Pods
+Service Discovery: DNS
+
+
+Kubernetes: NodePort, Ingress
+Openshift:  Route
+
+
+
+Route/Ingress		http https tls sni
+NodePort		for NON-HTTP Application
+Loadbalancer 		Expose application on cloud via External IP
+
+
+## Multus Secondary Networks ##
+Add Secondry IP to Pod via  
+1. Host device
+2. Bridge
+3. IPVLAN
+4. MACVLAN
+
+
+		## Chapter 6: Enable Developer Self-Service ##
+
+Look at Folder Chapter 6 and Follow Diagram
+
+Resource Quota
+
+Pod ( one or more Container's )
+
+LimitRange: Pod Resource (CPU/Memory) Containers Resource (CPU/Memory)
+ResourceQuota/Quota: Project Quota ( Resource CPU/Memory ) (Count Quota PODS,Services, Deployment, Routes)
+ClusterResourceQuota: User Based Quota (span over multiple projects)(One user PODS,Services, Deployment, Routes)
+
+
+
+label on nodes
+nodeSelector on Deployment/DeploymentConfig
+
+
+QoS: Pod
+
+cpu/memory
+			requests		limits
+BestEffort		No			NO		Best Node Maximum Resources
+Burstable		YES/NO			YES
+Guranteed		Same Resources		Same Resources
+
+Node  Select:
+
+## On NODE ##
+
+oc edit node/master02
+
+spec:
+  taints:
+  - effect: NoExecute
+    key: var1
+    value: value1
+
+  taints:
+  - effect: NoExecute
+    key: var1
+    value: value1
+
+## On Deployment ##  oc explain Deployment.spec.template.spec
+
+oc edit deployment/APP-NAME
+      tolerations:
+      - effect: NoExecute
+        key: var1
+        operator: Equal
+        value: value1
+
+
+
+oc  create resourcequota count-lmt --hard count/pods=10,count/secrets=10,count/serviceaccounts=5,count/services=2,count/deployments.apps=1
+
+oc  create resourcequota count-lmt --hard count/pods=10,count/secrets=10,count/serviceaccounts=5,count/services=2,count/deployments.apps=1,count/routes.route.openshift.io=2
+
+Limit Ranges:
+defaultRequest — is how much CPU/Memory will be given to Container, if it doesn't specify it's own value
+default — is default limit for amount of CPU/Memory for Container, if it doesn't specify it's own value
+max — is maximum limit for amount of CPU/Memory that Container can ask for. I.e. it can't set it's own limit more than that
+min — is minimum limit amount of CPU/Memory that Container can ask for. I.e. it can't set it's own limit less than that
+
+
+ResourceQuota
+in Project:
+Based on numbers of resources		count-quota		services=2,pods=10,rc=2,route=1
+Based on Compute resource		compute-quota		CPU= Memory Storage
+
+
+	ProjectQuota				ClusterQuota
+	resourceQuota				Normal use case for 1. user
+	
+	
+
+
+oc create clusterresourcequota ivars-user-quota --hard count/pods=10,count/services=2,count/deployments.apps=2
+oc login -u  admin -p password
+oc create clusterresourcequota ivars-user-quota --hard count/pods=10,count/services=2,count/deployments.apps=2 --project-annotation-selector openshift.io/requester=ivars
+oc describe clusterresourcequotas.quota.openshift.io ivars-user-quota 
+oc create clusterresourcequota ivars-location-quota --hard count/pods=10,count/services=2,count/deployments.apps=2 --project-label-selector location=riga
+
+
+oc get event --sort-by .metadata.creationTimestamp -w
+oc describe project ivars-project1
+oc label namespaces ivars-project1 location=riga
+oc get limitranges 
+oc create -f pods-container-limits.yml 
+oc set resources deployment/test-limit --requests cpu=10m,memory=50Mi
+oc set resources deployment/test-limit  --limits cpu=210m,memory=100Mi
+
+## Create New Project Template ##
+
+oc adm create-bootstrap-project-template -o yaml > plan-project.yml
+vim plan-project.yml
+oc create -f plan-project.yml -n openshift-config
+
+## Modify cluster to use NEW Project Template ##
+
+oc edit projects.config.openshift.io/cluster
+oc get pods -n openshift-apiserver -w
+oc get pods -n openshift-apiserver -w -o wide
+
+	
+	
+	
+
+		## Chapter 7: Manage Kubernetes Operators ##
+
+GUI: Find Operator from operator link and install
+
+Command Line: Look at MetalLB from folder provided and Follow Documentation for every Operator from Vendor Website
+
+//Cluster Version
+
+oc get clusterversioncreate deployment db-pod --port 3306 \
+--image registry.ocp4.example.com:8443/rhel8/mysql-80
+oc describe clusterversion | less
+
+
+
+//Cluster Operators
+
+oc get clusteroperators | less
+oc describe clusteroperators image-registry
+oc get all -n openshift-console
+oc get all -n openshift-console-operator 
+oc get all -n openshift-dns
+oc get all -n openshift-dns-operator 
+
+
+		## Chapter 8: Application Security  ##
+
+	## Security Context Constraints (SCCs) ##
+SCC:
+
+By Default openshift doesn't allow to run apps/pods as priviliege user, it has to run as random user which can be found by
+oc describe project {{project_name}}
+
+
+
+Security:
+OCP does not allow a Container to run as Priviliged User 
+
+Build Automation:
+Intgrated S2i ->  Pull Source Code git, Build image, Push Image to Internal Registry, Deploy pods with Image
+	
+
+## Service Account
+
+oc create serviceaccount service-account-name
+oc adm policy add-scc-to-user SCC -z service-account
+		OR
+oc adm policy add-scc-to-user SCC -z system:serviceaccount:projectname:service-account
+
+
+oc set serviceaccount deployment/deployment-name service-account-name
+
+oc get scc
+oc describe scc restricted
+man 7 capabilities
+
+oc get scc nonroot -o yaml > nonroot.yml
+vim nonroot.yml
+## Make Changes
+oc create -f nonroot.yml
+
+
+
+
+
+
+
+
+
+
+
+
+oc create configmap db-config --from-literal=user_value=user1 --from-literal=db_value=items
+
+oc create secret generic mysql --from-literal=MYSQL_PASSWORD=mypa55 --from-literal=MYSQL_ROOT_PASSWORD=r00tpa55
+
+
+
+
+## Allow Project2 service account to access image from Project1 ##
+oc policy add-role-to-user system:image-puller system:serviceaccount:project2:SERVICE_ACCOUNT_NAME --namespace=project1		
+
+oc create serviceaccount share-care -n project2
+oc policy add-role-to-user system:image-puller system:serviceaccount:project2:share-care -n project1
+
+
+		## JOB ##
+
+## One time Job with command ##
+oc create job test --image=registry.access.redhat.com/ubi8/ubi:8.6 -- ls /tmp
+
+## Create One time Job Yaml file with command ##
+oc create job --dry-run=client -o yaml test --image=registry.access.redhat.com/ubi8/ubi:8.6 -- ls /tmp
+
+
+		## CRON JOB ##
+
+## One time CronJob with command ##
+oc create cronjob test --image=registry.access.redhat.com/ubi8/ubi:8.6 --schedule='0 0 * * *' -- ls /tmp
+
+## Create One time Job Yaml file with command ##
+oc create cronjob test--dry-run=client -o yaml --image=registry.access.redhat.com/ubi8/ubi:8.6 --schedule='0 0 * * *' -- ls /tmp
+
+
+
+
+
+			## Chapter 9: OpenShift Updates  ##
+
+Candidate -> Fast -> Stable 
+	
+OCP 4.12.0 -> 4.12.14
+
+All Master/WOrker will be updates
+Redhat CoreOS you will not update 
+
+candidate			Development
+fast				QA,Test
+stable				Production
+EUS				Long Term Support
+Extended Update Support Channel
+
+
+
+
+
+
+			
+
+
+Difference Deployment and DeploymentConfig
+
+https://docs.openshift.com/container-platform/4.6/applications/deployments/what-deployments-are.html#deployments-comparing-deploymentconfigs_what-deployments-are
