@@ -1,0 +1,9 @@
+kind: Kustomization
+namespace: some
+resources:
+  - ../../base/
+patches:
+  - path: deployment-patch.yml
+    target:
+      kind: Deployment
+      name: custom

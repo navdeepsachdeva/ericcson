@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  creationTimestamp: null
+  name: countquota
+spec:
+  hard:
+    cpu: "100"
+    limits.cpu: "200"
+    limits.memory: 500Mi
+    memory: 100Mi
+status: {}

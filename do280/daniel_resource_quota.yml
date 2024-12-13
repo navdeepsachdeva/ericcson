@@ -1,0 +1,17 @@
+apiVersion: quota.openshift.io/v1
+kind: ClusterResourceQuota
+metadata:
+  creationTimestamp: null
+  name: daniel-quota
+spec:
+  quota:
+    hard:
+      count/pods: "10"
+      count/services: "2"
+  selector:
+    annotations:
+      openshift.io/requester: daniel
+    labels: null
+status:
+  namespaces: null
+  total: {}

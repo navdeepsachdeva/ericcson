@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-redhat
+  namespace: some
+data:
+  database: items
+  user: rasmus

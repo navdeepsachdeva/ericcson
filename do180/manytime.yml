@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  creationTimestamp: null
+  name: manytimes
+spec:
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+      name: manytimes
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - -c
+            - ls -l /var/www/html/
+            image: quay.io/navdeep_sachdeva/tax-image:prod
+            name: manytimes
+            resources: {}
+          restartPolicy: OnFailure
+  schedule: "*/1 9-15 * * *"
+status: {}

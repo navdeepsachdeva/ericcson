@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: list-files
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - ls -l /var/www/html/
+        - --dry-run=client
+        image: quay.io/navdeep_sachdeva/tax-image:prod
+        name: list-files
+        resources: {}
+      restartPolicy: Never
+status: {}

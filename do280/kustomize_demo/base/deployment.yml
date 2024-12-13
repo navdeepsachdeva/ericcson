@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom
+  namespace: some
+  labels:
+    app: custom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom
+  template:
+    metadata:
+      labels:
+        app: custom
+    spec:
+      containers:
+        - name: web
+          image: registry.access.redhat.com/ubi9/httpd-24
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+        - name: db
+          image: registry.access.redhat.com/rhscl/mysql-80-rhel7
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-redhat-ghmdhhcfb4
+                  key: user
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-redhat-ghmdhhcfb4
+                  key: database
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secret-redhat-46kc26gd8b
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secret-redhat-46kc26gd8b
+                  key: root_password
+          ports:
+            - containerPort: 3306
+              protocol: TCP

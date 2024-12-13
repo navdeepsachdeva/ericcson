@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: badpod
+  labels:
+    you: me
+spec:
+  containers:
+    - name: web
+      image: docker.io/library/httpd
+      ports:
+        - containerPort: 80
+          protocol: TCP

@@ -1,0 +1,18 @@
+kind: Kustomization
+resources:
+  - project.yml
+  - deployment.yml
+  - service.yml
+  - route.yml
+
+configMapGenerator:
+- name: cm-redhat
+  literals:
+    - database=items
+    - user=daniel
+
+secretGenerator:
+- name: secret-redhat
+  literals:
+    - password=mypa55
+    - root_password=r00tpa55

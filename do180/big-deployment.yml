@@ -1,0 +1,105 @@
+---
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: some
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-redhat
+  namespace: some
+data:
+  database: items
+  user: rasmus
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-redhat
+  namespace: some
+type: Opaque
+data:
+  password: bXlwYTU1
+  root_password: cjAwdHBhNTU=
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom
+  namespace: some
+  labels:
+    app: custom
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: custom
+  template:
+    metadata:
+      labels:
+        app: custom
+    spec:
+      containers:
+        - name: web
+          image: registry.access.redhat.com/ubi9/httpd-24
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+        - name: db
+          image: registry.access.redhat.com/rhscl/mysql-80-rhel7
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-redhat
+                  key: user
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: cm-redhat
+                  key: database
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secret-redhat
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secret-redhat
+                  key: root_password
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myservice
+  namespace: some
+  labels:
+    app: custom
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+  selector:
+    app: custom
+  type: ClusterIP
+ 
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: myroute
+  namespace: some
+spec:
+  to:
+    kind: Service
+    name: myservice
